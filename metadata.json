@@ -1,0 +1,6 @@
+{
+  "name": "Celebration of You - Birthday Tribute",
+  "description": "An enchanting, highly animated birthday celebration experience with interactive candles, customizable photo memories, personalized letters, and background music.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
