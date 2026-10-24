@@ -2,19 +2,19 @@ import { BirthdayConfig } from '../types/birthday';
 
 export const DEFAULT_BIRTHDAY_CONFIG: BirthdayConfig = {
   recipientName: 'Neha',
-  senderName: 'Yours Forever',
+  senderName: 'Your friend',
   birthDate: '2006-10-27',
   headline: 'Happy Birthday, Beautiful Soul',
   subheadline: 'To the person who makes the world infinitely brighter just by existing in it.',
   letter: {
-    salutation: 'Dearest Sophia,',
+    salutation: 'Dear Neha,',
     paragraphs: [
-      'Today is a celebration of the day the universe gave us you. From your gentle laugh that makes any heavy day light, to the quiet wisdom and fierce kindness you carry everywhere you go, you have changed my life in ways words can barely reach.',
-      'I hope this year brings you all the quiet peace you deserve, all the breathless adventures you dream about, and all the happiness your big heart gives away so freely to everyone else.',
-      'Thank you for being my favorite story, my sanctuary, and my greatest blessing.',
+      'Happy birthday, Neha! I’m really glad we’re friends. Thanks for the laughs, the random conversations, and for being yourself. Having a good friend like you is something I really appreciate.',
+      'I hope this year brings you plenty of reasons to smile, new things to try, and progress towards the things that matter to you. Keep doing your thing, and remember to give yourself some credit along the way. I’ll be cheering you on!',
+      'I made this little surprise to make your birthday a bit more fun. Enjoy your day, take lots of pictures, and save me a piece of cake! Here’s to more laughs, random chats, and good memories together.',
     ],
-    closing: 'With all my heart and infinite love,',
-    signoff: 'Forever & Always',
+    closing: 'Wishing you an amazing year ahead,',
+    signoff: 'Your friend',
   },
   reasons: [
     'The way your eyes crinkle with pure joy when you truly laugh.',

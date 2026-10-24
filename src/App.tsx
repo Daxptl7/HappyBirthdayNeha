@@ -47,13 +47,13 @@ function LetterScene({ onNext }: { onNext: () => void }) {
       <button className="envelope" aria-label="Open your birthday letter" onClick={() => setOpen(true)}>
         <span className="envelope-paper">Dear {config.recipientName},<br /><span>this one is for you.</span></span>
         <span className="envelope-back" /><span className="envelope-flap" /><span className="envelope-front" />
-        <span className="wax-seal"><Heart size={22} fill="currentColor" /></span>
-        <span className="envelope-address">To {config.recipientName}, with love</span>
+        <span className="wax-seal"><Sparkles size={22} /></span>
+        <span className="envelope-address">To {config.recipientName}, from your friend</span>
       </button>
       <button className="text-button" onClick={() => setOpen(true)}>Break the seal <ArrowRight size={16} /></button>
     </> : <div className="letter-reveal">
       <article className="letter-paper">
-        <Heart size={20} className="letter-heart" />
+        <Sparkles size={20} className="letter-heart" />
         <h2>{config.letter.salutation}</h2>
         {config.letter.paragraphs.map((paragraph, i) => <p key={i}>{paragraph}</p>)}
         <p className="letter-signoff">{config.letter.closing}<br /><em>{config.letter.signoff}</em></p>
