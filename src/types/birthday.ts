@@ -2,6 +2,9 @@ export interface PhotoMemory {
   id: string;
   url: string;
   caption: string;
+  alt?: string;
+  width?: number;
+  height?: number;
   date?: string;
   tag?: string;
 }

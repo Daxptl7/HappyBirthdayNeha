@@ -1,286 +1,270 @@
-/**
- * @license
- * SPDX-License-Identifier: Apache-2.0
- */
-
-import React, { useState, useEffect } from 'react';
-import { Heart, Sparkles, ArrowUp } from 'lucide-react';
-import { BirthdayConfig, BirthdayLetter, PhotoMemory } from './types/birthday';
-import { DEFAULT_BIRTHDAY_CONFIG } from './data/defaultConfig';
-import { decodeBirthdayConfig } from './utils/birthdayLogic';
+import { lazy, Suspense, useCallback, useEffect, useRef, useState } from 'react';
+import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
+import { ArrowDown, ArrowRight, Check, Gift, Heart, Mail, Music2, Pause, Play, Sparkles } from 'lucide-react';
+import QRCode from 'qrcode';
+import { EXPERIENCE_CONFIG as config } from './data/experienceConfig';
 import { birthdayAudio } from './utils/audioPlayer';
 import { triggerCelebrationConfetti } from './utils/confettiUtils';
+import { BirthdayStage, canStartCelebration, getCountdown, nextBirthdayStage, registerSecretTap, toLocalDateTimeInput } from './utils/experienceLogic';
+import { MemoryGallery } from './components/MemoryGallery';
+import { WishSky } from './components/WishSky';
+import { SecretSurprise } from './components/SecretSurprise';
+import { LanternFinale } from './components/LanternFinale';
+import './birthday.css';
+import './surprises.css';
 
-import { CelebrationHeader } from './components/CelebrationHeader';
-import { StarfieldBackground } from './components/StarfieldBackground';
-import { MouseFollower } from './components/MouseFollower';
-import { FloatingBalloons } from './components/FloatingBalloons';
-import { HeroSection } from './components/HeroSection';
-import { PhotoGallerySection } from './components/PhotoGallerySection';
-import { CakeCandlesSection } from './components/CakeCandlesSection';
-import { LoveLetterSection } from './components/LoveLetterSection';
-import { ReasonsWhySection } from './components/ReasonsWhySection';
-import { GiftBoxSection } from './components/GiftBoxSection';
-import { PersonalizeModal } from './components/PersonalizeModal';
-import { ShareModal } from './components/ShareModal';
-import { RevealOnScroll } from './components/RevealOnScroll';
+const loadBirthdayCake = () => import('./components/BirthdayCake3D');
+const BirthdayCake3D = lazy(loadBirthdayCake);
 
-const STORAGE_KEY = 'birthday_config_vault_v1';
+const chapters: { stage: BirthdayStage; label: string }[] = [
+  { stage: 'countdown', label: 'The anticipation' },
+  { stage: 'cake', label: 'Make a wish' },
+  { stage: 'birthday', label: 'Your moment' },
+  { stage: 'letter', label: 'A little letter' },
+  { stage: 'memories', label: 'The memories' },
+  { stage: 'wishes', label: 'Twenty little wishes' },
+  { stage: 'surprise', label: 'One last thing' },
+];
+
+function CakeScene({ onComplete, onListeningChange }: { onComplete: () => void; onListeningChange: (active: boolean) => void }) {
+  return <>
+    <p className="eyebrow">A little wish, a little magic</p>
+    <h1>First, make a <em>wish.</em></h1>
+    <p className="scene-description">Make a little wish, then blow out your candles.<br />There’s a birthday slice with your name on it.</p>
+    <Suspense fallback={<div className="cake-module-loading" role="status">A little birthday magic is getting ready…</div>}>
+      <BirthdayCake3D recipientName={config.recipientName} onComplete={onComplete} onListeningChange={onListeningChange} />
+    </Suspense>
+  </>;
+}
+
+function LetterScene({ onNext }: { onNext: () => void }) {
+  const [open, setOpen] = useState(false);
+  return <>
+    <p className="eyebrow">Some things are better written</p>
+    <h1>A little something,<br /><em>just for you.</em></h1>
+    {!open ? <>
+      <p className="scene-description">No grand speech. Just a few words from the heart.</p>
+      <button className="envelope" aria-label="Open your birthday letter" onClick={() => setOpen(true)}>
+        <span className="envelope-paper">Dear {config.recipientName},<br /><span>this one is for you.</span></span>
+        <span className="envelope-back" /><span className="envelope-flap" /><span className="envelope-front" />
+        <span className="wax-seal"><Heart size={22} fill="currentColor" /></span>
+        <span className="envelope-address">To {config.recipientName}, with love</span>
+      </button>
+      <button className="text-button" onClick={() => setOpen(true)}>Break the seal <ArrowRight size={16} /></button>
+    </> : <div className="letter-reveal">
+      <article className="letter-paper">
+        <Heart size={20} className="letter-heart" />
+        <h2>{config.letter.salutation}</h2>
+        {config.letter.paragraphs.map((paragraph, i) => <p key={i}>{paragraph}</p>)}
+        <p className="letter-signoff">{config.letter.closing}<br /><em>{config.letter.signoff}</em></p>
+      </article>
+      <button className="primary-button" onClick={onNext}>A few memories next? <ArrowRight size={17} /></button>
+    </div>}
+  </>;
+}
+
+function SurpriseScene({ onNext }: { onNext: () => void }) {
+  const [qr, setQr] = useState('');
+  const [failed, setFailed] = useState(false);
+  const [prank, setPrank] = useState(false);
+  useEffect(() => {
+    let cancelled = false;
+    QRCode.toDataURL(config.surprise.qrValue, { width: 768, margin: 4, errorCorrectionLevel: 'M', color: { dark: '#35232c', light: '#ffffff' } })
+      .then(url => { if (!cancelled) setQr(url); })
+      .catch(() => { if (!cancelled) setFailed(true); });
+    return () => { cancelled = true; };
+  }, []);
+  const isLink = /^https?:\/\//i.test(config.surprise.qrValue);
+  if (prank) return <>
+    <span className="prank-gift" aria-hidden="true"><Gift size={46} strokeWidth={1} /><Sparkles size={23} /></span>
+    <p className="eyebrow">You didn’t think it was that easy, did you?</p>
+    <h1>Just kidding!<br /><em>Happy birthday to you.</em></h1>
+    <p className="scene-description">You weren’t getting away without another birthday wish, {config.recipientName}.<br />Your gift is a whole sky of good things. There’s one last little moment waiting.</p>
+    <button className="primary-button prank-continue" onClick={onNext}>One last wish under the stars <Sparkles size={17} /></button>
+  </>;
+  return <>
+    <p className="eyebrow">Your final birthday mission</p>
+    <h1>{config.surprise.title}<br /><em>{config.surprise.titleEmphasis}</em></h1>
+    <p className="scene-description">{config.surprise.description}<br />Scan it with another phone’s camera to find out.</p>
+    <div className="qr-card"><span className="qr-corner top-left" /><span className="qr-corner bottom-right" />
+      {qr ? <img src={qr} width="240" height="240" alt="Scan this QR code to reveal your birthday surprise" /> : <div className="qr-loading" role="status">{failed ? 'Open your surprise with the button below.' : 'A little mystery is getting ready…'}</div>}
+      <span className="qr-caption"><Gift size={14} /> for your eyes only</span>
+    </div>
+    {isLink ? <a className="primary-button" href={config.surprise.qrValue} target="_blank" rel="noopener noreferrer">Open surprise on this phone <ArrowRight size={17} /></a> : <button className="primary-button" onClick={() => setPrank(true)}>Open surprise on this phone <ArrowRight size={17} /></button>}
+    <button className="text-button" onClick={() => setPrank(true)}>{isLink ? 'I’ve opened it' : 'I’ve scanned it'} <Check size={16} /></button>
+    <button className="skip-button" onClick={() => setPrank(true)}>Skip this part <ArrowRight size={13} /></button>
+  </>;
+}
+
+function TestClock({ onSet, onQuick, onReset }: { onSet: (time: number) => void; onQuick: () => void; onReset: () => void }) {
+  const [value, setValue] = useState(() => toLocalDateTimeInput(Date.now() + 60_000));
+  const [error, setError] = useState('');
+  return <details className="test-clock"><summary><span className="test-dot" />Development · test the timing</summary>
+    <form onSubmit={event => {
+      event.preventDefault();
+      const time = new Date(value).getTime();
+      if (!Number.isFinite(time) || time <= Date.now()) { setError('Choose a future date and time to test the countdown.'); return; }
+      setError(''); onSet(time);
+    }}>
+      <label htmlFor="test-time">Start the celebration at</label>
+      <input id="test-time" type="datetime-local" step="1" required value={value} onChange={event => setValue(event.target.value)} />
+      <small>Your device’s local timezone. Click “I’m ready” after setting it.</small>
+      <button className="test-action" type="submit">Set test time</button>
+      {error && <p className="test-error" role="alert">{error}</p>}
+    </form>
+    <div className="test-shortcuts"><button onClick={onQuick}>Start 10-second test</button><button onClick={onReset}>Use birthday time</button></div>
+    <p>Only visible in development. Published pages use the time in experienceConfig.ts.</p>
+  </details>;
+}
 
 export default function App() {
-  const [config, setConfig] = useState<BirthdayConfig>(() => {
-    if (typeof window !== 'undefined') {
-      const hash = window.location.hash;
-      if (hash.includes('tribute=')) {
-        const encoded = hash.split('tribute=')[1];
-        const decoded = decodeBirthdayConfig(encoded);
-        if (decoded) {
-          return {
-            ...DEFAULT_BIRTHDAY_CONFIG,
-            ...decoded,
-            letter: decoded.letter || DEFAULT_BIRTHDAY_CONFIG.letter,
-          };
-        }
-      }
+  const reducedMotion = useReducedMotion();
+  const [stage, setStage] = useState<BirthdayStage>('countdown');
+  const [now, setNow] = useState(Date.now);
+  const [target, setTarget] = useState(() => Date.parse(config.celebrationAt));
+  const [armed, setArmed] = useState(false);
+  const [preparing, setPreparing] = useState(false);
+  const [playing, setPlaying] = useState(false);
+  const [audioMessage, setAudioMessage] = useState('');
+  const [isTest, setIsTest] = useState(false);
+  const [secretOpen, setSecretOpen] = useState(false);
+  const [microphoneActive, setMicrophoneActive] = useState(false);
+  const secretTaps = useRef({ count: 0, startedAt: 0 });
+  const resumeAfterMicrophone = useRef(false);
+  const stageRef = useRef(stage); stageRef.current = stage;
+  const mainRef = useRef<HTMLElement>(null);
+  const countdown = getCountdown(target, now);
+  const chapterIndex = stage === 'finale' ? chapters.length - 1 : chapters.findIndex(chapter => chapter.stage === stage);
 
-      try {
-        const saved = localStorage.getItem(STORAGE_KEY);
-        if (saved) {
-          return JSON.parse(saved);
-        }
-      } catch (e) {
-        console.warn('Could not read from localStorage', e);
-      }
-    }
-    return DEFAULT_BIRTHDAY_CONFIG;
-  });
+  useEffect(() => {
+    // Fetch the 3D scene while she waits; initialize WebGL only at the cake step.
+    void loadBirthdayCake().catch(() => {});
+  }, []);
 
-  const [isPersonalizeOpen, setIsPersonalizeOpen] = useState(false);
-  const [isShareOpen, setIsShareOpen] = useState(false);
-  const [personalizeTab, setPersonalizeTab] = useState<'details' | 'letter' | 'photos' | 'song'>('details');
-
-  // Sync audio engine with config song
   useEffect(() => {
     birthdayAudio.setSong(config.song.type, config.song.customUrl, config.song.audioData);
-  }, [config.song]);
+    const unsubscribe = birthdayAudio.subscribe(setPlaying);
+    return () => { unsubscribe(); birthdayAudio.stop(); };
+  }, []);
 
-  // Persist config to localStorage
-  const handleSaveConfig = (updated: BirthdayConfig) => {
-    setConfig(updated);
-    try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
-    } catch (e) {
-      console.warn('Could not save to localStorage', e);
+  useEffect(() => {
+    if (stage !== 'countdown') return;
+    const update = () => setNow(Date.now());
+    const interval = window.setInterval(update, 250);
+    document.addEventListener('visibilitychange', update);
+    window.addEventListener('focus', update);
+    return () => { window.clearInterval(interval); document.removeEventListener('visibilitychange', update); window.removeEventListener('focus', update); };
+  }, [stage]);
+
+  useEffect(() => {
+    if (stage === 'countdown' && canStartCelebration(target, now, armed)) {
+      setStage('cake');
+      void birthdayAudio.play().then(success => setAudioMessage(success ? '' : 'Tap the music button to start your birthday song.'));
     }
-  };
+  }, [stage, target, now, armed]);
 
-  const handleResetConfig = () => {
-    setConfig(DEFAULT_BIRTHDAY_CONFIG);
-    try {
-      localStorage.removeItem(STORAGE_KEY);
-    } catch {}
-    birthdayAudio.setSong(
-      DEFAULT_BIRTHDAY_CONFIG.song.type,
-      DEFAULT_BIRTHDAY_CONFIG.song.customUrl,
-      DEFAULT_BIRTHDAY_CONFIG.song.audioData
-    );
-  };
+  useEffect(() => {
+    mainRef.current?.focus({ preventScroll: true });
+    window.scrollTo({ top: 0, behavior: 'instant' });
+    if ((stage === 'birthday' || stage === 'finale') && !reducedMotion) triggerCelebrationConfetti();
+  }, [stage, reducedMotion]);
 
-  const handleAddPhoto = (newPhoto: PhotoMemory) => {
-    const updated = {
-      ...config,
-      photos: [newPhoto, ...config.photos],
-    };
-    handleSaveConfig(updated);
-  };
+  const handleListeningChange = useCallback((active: boolean) => {
+    setMicrophoneActive(active);
+    if (active) {
+      resumeAfterMicrophone.current = birthdayAudio.getIsPlaying();
+      birthdayAudio.pause();
+    } else {
+      const resume = resumeAfterMicrophone.current;
+      resumeAfterMicrophone.current = false;
+      if (resume && stageRef.current === 'cake') void birthdayAudio.play();
+    }
+  }, []);
 
-  const handleDeletePhoto = (id: string) => {
-    const updated = {
-      ...config,
-      photos: config.photos.filter((p) => p.id !== id),
-    };
-    handleSaveConfig(updated);
-  };
+  function tapName() {
+    const result = registerSecretTap(secretTaps.current, Date.now());
+    secretTaps.current = result;
+    if (result.unlocked) setSecretOpen(true);
+  }
 
-  const handleUpdateLetter = (letter: BirthdayLetter) => {
-    const updated = {
-      ...config,
-      letter,
-    };
-    handleSaveConfig(updated);
-  };
+  async function enterExperience() {
+    setPreparing(true);
+    const ready = await birthdayAudio.prepare();
+    setAudioMessage(ready ? '' : 'If the song needs a tap, use the music button when the celebration begins.');
+    setNow(Date.now()); setArmed(true); setPreparing(false);
+  }
 
-  const handleUpdateReasons = (reasons: string[]) => {
-    const updated = {
-      ...config,
-      reasons,
-    };
-    handleSaveConfig(updated);
-  };
+  function reset(time: number, test: boolean) {
+    resumeAfterMicrophone.current = false; setSecretOpen(false); secretTaps.current = { count: 0, startedAt: 0 };
+    birthdayAudio.stop(); setAudioMessage(''); setArmed(false); setStage('countdown'); setTarget(time); setNow(Date.now()); setIsTest(test);
+  }
 
-  const scrollToTop = () => {
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-  };
+  async function quickTest() {
+    reset(Date.now() + 10_000, true);
+    await enterExperience();
+  }
+
+  async function toggleMusic() {
+    if (playing) { birthdayAudio.pause(); setAudioMessage(''); return; }
+    const success = await birthdayAudio.play();
+    setAudioMessage(success ? '' : 'The song couldn’t play. Please tap to try again.');
+  }
+
+  const targetLabel = new Intl.DateTimeFormat('en-GB', { day: '2-digit', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit', hour12: true, timeZone: isTest ? undefined : config.timeZone }).format(target);
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-[#fffaf5] via-[#fff5ee] to-[#fef2f4] text-[#2d1822] relative selection:bg-rose-400 selection:text-white">
-      {/* Subtle Animated Parallax Starfield Canvas Layer */}
-      <StarfieldBackground />
+    <div className={`birthday-app ${stage === 'cake' ? 'is-cake' : ''} ${stage === 'wishes' || stage === 'finale' ? 'is-night' : ''}`}>
+      <div className="ambient-orb orb-one" aria-hidden="true" /><div className="ambient-orb orb-two" aria-hidden="true" />
+      <div className="decorative-stars" aria-hidden="true"><span>✧</span><span>✦</span><span>✧</span><span>✦</span><span>✧</span><span>✧</span></div>
+      <header className="journey-header">
+        <span className="birthday-wordmark"><span className="wordmark-icon"><Gift size={18} strokeWidth={1.5} /></span>just for <button className="secret-name wordmark-name" aria-label={config.recipientName} onClick={tapName}><em>{config.recipientName.toLowerCase()}.</em></button></span>
+        <span className="header-date">27 OCT <span>·</span> A DAY ALL ABOUT YOU</span>
+        <button className={`music-toggle ${playing ? 'is-playing' : ''}`} onClick={toggleMusic} disabled={stage === 'countdown' || microphoneActive} aria-label={playing ? 'Pause birthday music' : 'Play birthday music'} aria-pressed={playing}>
+          {playing ? <Pause size={14} /> : <Music2 size={16} />}<span>{stage === 'countdown' ? 'sound on at the surprise' : microphoneActive ? 'a quiet birthday wish' : playing ? 'music on' : 'music off'}</span>
+          <span className="sound-bars" aria-hidden="true"><i /><i /><i /></span>
+        </button>
+      </header>
 
-      {/* Gentle Multi-Colored Circular Light Effect Around User's Cursor */}
-      <MouseFollower />
+      <nav className="chapter-rail" aria-label="Your birthday journey"><ol>{chapters.map((chapter, i) => <li key={chapter.stage} className={i === chapterIndex ? 'current' : i < chapterIndex ? 'complete' : ''} aria-current={i === chapterIndex ? 'step' : undefined}><span className="chapter-number">{i < chapterIndex ? <Check size={11} /> : String(i + 1).padStart(2, '0')}</span><span className="chapter-label">{chapter.label}</span></li>)}</ol></nav>
 
-      {/* Background Floating Balloons & Warm Sunlit Glow */}
-      <FloatingBalloons />
-
-      {/* Top Bar Contract Navigation */}
-      <CelebrationHeader
-        recipientName={config.recipientName}
-        onOpenPersonalize={() => {
-          setPersonalizeTab('details');
-          setIsPersonalizeOpen(true);
-        }}
-        onOpenShare={() => setIsShareOpen(true)}
-      />
-
-      {/* Main Content Sections */}
-      <main className="relative z-10 pb-20">
-        {/* 1. Hero Section */}
-        <RevealOnScroll sectionId="hero" threshold={0.05}>
-          <HeroSection
-            config={config}
-            onOpenPersonalize={() => {
-              setPersonalizeTab('details');
-              setIsPersonalizeOpen(true);
-            }}
-          />
-        </RevealOnScroll>
-
-        {/* 2. Interactive Three.js 3D Cake Cutting & 3D Gift Stage */}
-        <RevealOnScroll sectionId="cake" delayMs={60}>
-          <CakeCandlesSection recipientName={config.recipientName} />
-        </RevealOnScroll>
-
-        {/* 3. Photo Gallery / Moments with her */}
-        <RevealOnScroll sectionId="memories" delayMs={60}>
-          <PhotoGallerySection
-            photos={config.photos}
-            recipientName={config.recipientName}
-            onAddPhoto={handleAddPhoto}
-            onDeletePhoto={handleDeletePhoto}
-          />
-        </RevealOnScroll>
-
-        {/* 4. Personalized Love Letter with Wax Seal opening */}
-        <RevealOnScroll sectionId="letter" delayMs={60}>
-          <LoveLetterSection
-            letter={config.letter}
-            recipientName={config.recipientName}
-            senderName={config.senderName}
-            onUpdateLetter={handleUpdateLetter}
-            onOpenPersonalize={() => {
-              setPersonalizeTab('letter');
-              setIsPersonalizeOpen(true);
-            }}
-          />
-        </RevealOnScroll>
-
-        {/* 5. Reasons Why You're Celebrated */}
-        <RevealOnScroll sectionId="reasons" delayMs={60}>
-          <ReasonsWhySection
-            reasons={config.reasons}
-            recipientName={config.recipientName}
-            onUpdateReasons={handleUpdateReasons}
-          />
-        </RevealOnScroll>
-
-        {/* 6. Gift Box with Unwrapping Animation and Love Tickets */}
-        <RevealOnScroll sectionId="gift" delayMs={60}>
-          <GiftBoxSection
-            giftNote={config.giftNote}
-            tickets={config.giftTickets}
-            recipientName={config.recipientName}
-          />
-        </RevealOnScroll>
-
-        {/* Unboxed Closing Celebration Tribute */}
-        <RevealOnScroll sectionId="closing" delayMs={60}>
-          <section className="py-24 px-6 text-center max-w-4xl mx-auto border-t border-rose-900/10">
-            <div className="relative z-10">
-              <div className="mx-auto flex items-center justify-center mb-4">
-                <Heart className="w-8 h-8 text-rose-500 fill-rose-500" />
+      <main className={`journey-main stage-${stage}`} ref={mainRef} tabIndex={-1} aria-label={stage === 'finale' ? `Happy birthday, ${config.recipientName}` : chapters[chapterIndex].label}>
+        <AnimatePresence mode="wait">
+          <motion.section className="scene" data-stage={stage} key={stage} initial={{ opacity: 0, y: reducedMotion ? 0 : 18 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: reducedMotion ? 0 : -12 }} transition={{ duration: reducedMotion ? 0 : .4 }}>
+            {stage === 'countdown' && <>
+              <div className="occasion-tag"><span />{isTest ? 'A little rehearsal for the big day' : 'Something wonderful is on its way'}</div>
+              <p className="eyebrow countdown-eyebrow">For the girl who makes life a little brighter</p>
+              <h1>Some days are special.<br /><em>This one is yours, {config.recipientName}.</em></h1>
+              <p className="scene-description">A little celebration, a few surprises, and a whole lot of love.<br />It all begins when the clock strikes your moment.</p>
+              <div className="countdown-dial" role="timer" aria-label={`${countdown.days} days, ${countdown.hours} hours, ${countdown.minutes} minutes, ${countdown.seconds} seconds until the celebration`}>
+                {([{ value: countdown.days, label: 'days' }, { value: countdown.hours, label: 'hours' }, { value: countdown.minutes, label: 'minutes' }, { value: countdown.seconds, label: 'seconds' }]).map(({ value, label }) => <div className="countdown-unit" key={label}><span>{String(value).padStart(2, '0')}</span><small>{label}</small></div>)}
               </div>
-              <h2 className="text-3xl sm:text-4xl md:text-5xl font-bold text-[#2d1822] font-display mb-4">
-                Happy Birthday, {config.recipientName}!
-              </h2>
-              <p className="text-[#634853] max-w-lg mx-auto text-sm sm:text-base leading-relaxed mb-8">
-                May your upcoming year be overflowing with quiet wonder, fierce joy, and endless dreams fulfilled.
-              </p>
-              <div className="flex flex-wrap items-center justify-center gap-8">
-                <button
-                  onClick={() => triggerCelebrationConfetti()}
-                  className="pb-2 border-b-2 border-rose-500 hover:border-amber-500 text-xs sm:text-sm font-semibold text-[#2d1822] hover:text-rose-600 transition-all flex items-center gap-2 cursor-pointer"
-                >
-                  <Sparkles className="w-4 h-4 text-rose-500" />
-                  <span>Shower Birthday Confetti</span>
-                </button>
-
-                <button
-                  onClick={scrollToTop}
-                  className="pb-2 border-b border-rose-900/25 hover:border-rose-500 text-xs sm:text-sm font-medium text-[#634853] hover:text-[#2d1822] transition-colors flex items-center gap-2 cursor-pointer"
-                >
-                  <ArrowUp className="w-4 h-4" />
-                  <span>Back to Top</span>
-                </button>
-              </div>
-            </div>
-          </section>
-        </RevealOnScroll>
+              <p className="countdown-date">{targetLabel} {isTest ? '· local test time' : 'IST'}<span>Born on 27 October 2006. Celebrated, always.</span></p>
+              {!armed ? <button className="primary-button" onClick={enterExperience} disabled={preparing}><Play size={15} fill="currentColor" />{preparing ? 'Getting your surprise ready…' : countdown.hasStarted ? 'Begin my birthday surprise' : 'I’m ready for the surprise'}<ArrowRight size={17} /></button> : <div className="ready-message" role="status"><span className="ready-heart"><Heart size={17} /></span>You’re all set. Stay here — the magic starts automatically.</div>}
+              <p className="small-note"><Music2 size={12} />{armed ? 'Keep this page open for your song and surprise.' : 'One little tap enables your birthday music. Headphones welcome.'}</p>
+              <div className="countdown-bottom" aria-hidden="true"><span>the best things are worth the wait</span><ArrowDown size={16} /></div>
+            </>}
+            {stage === 'cake' && <CakeScene onComplete={() => setStage(nextBirthdayStage('cake'))} onListeningChange={handleListeningChange} />}
+            {stage === 'birthday' && <>
+              <div className="birthday-monogram" aria-hidden="true"><Sparkles size={23} /><span>N</span><Heart size={24} /></div>
+              <p className="eyebrow">The world got a little luckier on this day</p>
+              <h1 className="birthday-title">Happy Birthday,<br /><button className="secret-name birthday-name" onClick={tapName} aria-label={config.recipientName}><em>{config.recipientName}.</em></button><span className="title-sparkle" aria-hidden="true">✧</span></h1>
+              <p className="scene-description">Here’s to your biggest dreams, your loudest laughs,<br />and a year that loves you right back.</p>
+              <span className="birthday-ribbon">27 October 2006 <Heart size={13} /> a very good day for the universe</span>
+              <button className="primary-button" onClick={() => setStage('letter')}>There’s a letter with your name on it <Mail size={17} /></button>
+            </>}
+            {stage === 'letter' && <LetterScene onNext={() => setStage('memories')} />}
+            {stage === 'memories' && <MemoryGallery onNext={() => setStage(nextBirthdayStage('memories'))} />}
+            {stage === 'wishes' && <WishSky onNext={() => setStage(nextBirthdayStage('wishes'))} />}
+            {stage === 'surprise' && <SurpriseScene onNext={() => setStage('finale')} />}
+            {stage === 'finale' && <LanternFinale onReplay={() => { birthdayAudio.stop(); setArmed(false); setAudioMessage(''); setNow(Date.now()); setStage('cake'); void birthdayAudio.play(); }} />}
+          </motion.section>
+        </AnimatePresence>
       </main>
 
-      {/* Personalize Modal (Names, Letter, Photos, Song) */}
-      <PersonalizeModal
-        config={config}
-        isOpen={isPersonalizeOpen}
-        initialTab={personalizeTab}
-        onClose={() => setIsPersonalizeOpen(false)}
-        onSave={handleSaveConfig}
-        onReset={handleResetConfig}
-      />
-
-      {/* Share Tribute Modal */}
-      <ShareModal
-        config={config}
-        isOpen={isShareOpen}
-        onClose={() => setIsShareOpen(false)}
-      />
-
-      {/* Quiet Warm Footer */}
-      <footer className="border-t border-rose-900/10 py-8 px-6 text-center text-xs text-[#7a5c68] relative z-10 bg-[#fdf3eb]">
-        <div className="max-w-6xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4">
-          <p>
-            Dedicated with endless affection to {config.recipientName} · {config.senderName}
-          </p>
-          <div className="flex items-center gap-4">
-            <button
-              onClick={() => {
-                setPersonalizeTab('details');
-                setIsPersonalizeOpen(true);
-              }}
-              className="hover:text-rose-600 transition-colors cursor-pointer"
-            >
-              Customize Tribute
-            </button>
-            <span aria-hidden="true">·</span>
-            <button
-              onClick={() => setIsShareOpen(true)}
-              className="hover:text-rose-600 transition-colors cursor-pointer"
-            >
-              Share Link
-            </button>
-          </div>
-        </div>
-      </footer>
+      {audioMessage && <p className="audio-message" role="status">{audioMessage}{stage !== 'countdown' && <button onClick={toggleMusic}>Play song <Play size={12} /></button>}</p>}
+      <footer className="journey-footer"><span>made with a little magic <span className="footer-ampersand">&</span> a lot of love</span><span className="footer-chapter">{stage === 'finale' ? 'A birthday to remember' : `${String(chapterIndex + 1).padStart(2, '0')} / ${String(chapters.length).padStart(2, '0')}`}<Heart size={12} /></span></footer>
+      {secretOpen && <SecretSurprise onClose={() => setSecretOpen(false)} />}
+      {import.meta.env.DEV && <TestClock onSet={time => reset(time, true)} onQuick={quickTest} onReset={() => reset(Date.parse(config.celebrationAt), false)} />}
     </div>
   );
 }

@@ -1,0 +1,47 @@
+{
+  "recipientName": "Neha",
+  "favoritePhotoId": "photo-1",
+  "secretPhotoId": "photo-4",
+  "photos": [
+    {
+      "id": "photo-1",
+      "url": "/IMG_4028.jpg",
+      "caption": "Your smile deserves a whole page.",
+      "tag": "A little sunshine",
+      "alt": "A collage of Neha in a brown top outdoors, including a close-up of her smile.",
+      "width": 1168,
+      "height": 2127,
+      "fit": "contain"
+    },
+    {
+      "id": "photo-2",
+      "url": "/IMG_4026%202.PNG",
+      "caption": "Just you, being beautifully you.",
+      "tag": "A favorite smile",
+      "alt": "A collage of Neha in a crochet top and blue jeans, with color portraits over a black-and-white background.",
+      "width": 1170,
+      "height": 2532,
+      "fit": "contain"
+    },
+    {
+      "id": "photo-3",
+      "url": "/IMG_4036.jpg",
+      "caption": "The little moments are the ones worth keeping.",
+      "tag": "Everyday magic",
+      "alt": "A collage of Neha wearing a black top and cream trousers beside a stone wall and plants.",
+      "width": 1169,
+      "height": 2072,
+      "fit": "contain"
+    },
+    {
+      "id": "photo-4",
+      "url": "/IMG_4037.jpg",
+      "caption": "A little red. A lot of radiance.",
+      "tag": "A little more color",
+      "alt": "A collage of Neha in a red top and white trousers in a green garden.",
+      "width": 1170,
+      "height": 2108,
+      "fit": "contain"
+    }
+  ]
+}
