@@ -6,3 +6,7 @@ coverage/
 *.log
 .env*
 !.env.example
+.local-https/
+/.srl
+# Original recording; the served copy is tracked in public/audio/.
+/AudioTranscriberAI_Baar Baar Din Yeh Aaye Happy Birthday UHD Quality Full Version Sonu Nigam Shifa Asgarali.wav
