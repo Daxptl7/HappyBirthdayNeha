@@ -71,7 +71,7 @@ const LOFI_CHIME_NOTES: Note[] = [
   { pitch: C5, duration: 3.0 },
 ];
 
-class BirthdayAudioEngine {
+export class BirthdayAudioEngine {
   private ctx: AudioContext | null = null;
   private isPlaying = false;
   private currentTimeout: any = null;
@@ -82,6 +82,7 @@ class BirthdayAudioEngine {
   private listeners: Set<(playing: boolean) => void> = new Set();
   private songType: string = 'celestial-music-box';
   private customSourceUrl: string | null = null;
+  private playRequest = 0;
 
   private initContext() {
     if (!this.ctx && typeof window !== 'undefined') {
@@ -91,7 +92,7 @@ class BirthdayAudioEngine {
       }
     }
     if (this.ctx && this.ctx.state === 'suspended') {
-      this.ctx.resume();
+      return this.ctx.resume();
     }
   }
 
@@ -135,38 +136,61 @@ class BirthdayAudioEngine {
 
   public setSong(type: string, customUrl?: string, customAudioData?: string) {
     this.stop();
+    this.customAudio = null;
     this.songType = type;
     this.customSourceUrl = customAudioData || customUrl || null;
   }
 
-  public play() {
-    this.initContext();
-
-    if (this.songType === 'custom-url' || this.songType === 'custom-file') {
-      if (this.customSourceUrl) {
+  // Called directly from the opening tap, before the countdown reaches zero.
+  public async prepare(): Promise<boolean> {
+    try {
+      if (this.customSourceUrl && (this.songType === 'custom-url' || this.songType === 'custom-file')) {
         if (!this.customAudio) {
-          this.customAudio = new Audio();
-          this.customAudio.addEventListener('ended', () => {
-            this.isPlaying = false;
-            this.notify();
-          });
+          this.customAudio = new Audio(this.customSourceUrl);
+          this.customAudio.loop = true;
+          this.customAudio.preload = 'auto';
+          this.customAudio.addEventListener('error', () => this.stop());
         }
-        this.customAudio.src = this.customSourceUrl;
-        this.customAudio.volume = this.isMuted ? 0 : this.volume;
-        this.customAudio.play().catch((err) => {
-          console.warn('Audio play request interrupted:', err);
-        });
-        this.isPlaying = true;
-        this.notify();
-        return;
+        // Authorize the media element during the gesture without playing the song aloud.
+        this.customAudio.volume = 0;
+        await this.customAudio.play();
+        this.customAudio.pause();
+        this.customAudio.currentTime = 0;
+        return true;
       }
+      await this.initContext();
+      return this.ctx?.state === 'running';
+    } catch {
+      return false;
     }
+  }
 
-    // Default to synthesizer
-    this.isPlaying = true;
-    this.noteIndex = 0;
-    this.notify();
-    this.scheduleNextNote();
+  public async play(): Promise<boolean> {
+    if (this.isPlaying) return true;
+    const request = ++this.playRequest;
+    try {
+      if (this.customSourceUrl && (this.songType === 'custom-url' || this.songType === 'custom-file')) {
+        if (!this.customAudio && !(await this.prepare())) return false;
+        if (request !== this.playRequest) return false;
+        this.customAudio!.volume = this.isMuted ? 0 : this.volume;
+        await this.customAudio!.play();
+      } else {
+        await this.initContext();
+        if (this.ctx?.state !== 'running') return false;
+      }
+      if (request !== this.playRequest) return false;
+      this.isPlaying = true;
+      this.noteIndex = 0;
+      this.notify();
+      if (!(this.customSourceUrl && (this.songType === 'custom-url' || this.songType === 'custom-file'))) this.scheduleNextNote();
+      return true;
+    } catch {
+      if (request === this.playRequest) {
+        this.isPlaying = false;
+        this.notify();
+      }
+      return false;
+    }
   }
 
   private playBellTone(freq: number, durationSec: number) {
@@ -235,6 +259,7 @@ class BirthdayAudioEngine {
   }
 
   public stop() {
+    this.playRequest++;
     this.isPlaying = false;
     if (this.currentTimeout) {
       clearTimeout(this.currentTimeout);
