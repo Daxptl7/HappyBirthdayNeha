@@ -238,7 +238,7 @@ export default function App() {
               <div className="countdown-dial" role="timer" aria-label={`${countdown.days} days, ${countdown.hours} hours, ${countdown.minutes} minutes, ${countdown.seconds} seconds until the celebration`}>
                 {([{ value: countdown.days, label: 'days' }, { value: countdown.hours, label: 'hours' }, { value: countdown.minutes, label: 'minutes' }, { value: countdown.seconds, label: 'seconds' }]).map(({ value, label }) => <div className="countdown-unit" key={label}><span>{String(value).padStart(2, '0')}</span><small>{label}</small></div>)}
               </div>
-              <p className="countdown-date">{targetLabel} {isTest ? '· local test time' : 'IST'}<span>Born on 27 October 2006. Celebrated, always.</span></p>
+              <p className="countdown-date">{targetLabel} {isTest ? '· local test time' : 'IST'}<span>Born on 26 October 2006. Celebrated, always.</span></p>
               {!armed ? <button className="primary-button" onClick={enterExperience} disabled={preparing}><Play size={15} fill="currentColor" />{preparing ? 'Getting your surprise ready…' : countdown.hasStarted ? 'Begin my birthday surprise' : 'I’m ready for the surprise'}<ArrowRight size={17} /></button> : <div className="ready-message" role="status"><span className="ready-heart"><Heart size={17} /></span>You’re all set. Stay here — the magic starts automatically.</div>}
               <p className="small-note"><Music2 size={12} />{armed ? 'Keep this page open for your song and surprise.' : 'One little tap enables your birthday music. Headphones welcome.'}</p>
               <div className="countdown-bottom" aria-hidden="true"><span>the best things are worth the wait</span><ArrowDown size={16} /></div>
@@ -249,7 +249,7 @@ export default function App() {
               <p className="eyebrow">The world got a little luckier on this day</p>
               <h1 className="birthday-title">Happy Birthday,<br /><button className="secret-name birthday-name" onClick={tapName} aria-label={config.recipientName}><em>{config.recipientName}.</em></button><span className="title-sparkle" aria-hidden="true">✧</span></h1>
               <p className="scene-description">Here’s to your biggest dreams, your loudest laughs,<br />and a year that loves you right back.</p>
-              <span className="birthday-ribbon">27 October 2006 <Heart size={13} /> a very good day for the universe</span>
+              <span className="birthday-ribbon">26 October 2006 <Heart size={13} /> a very good day for the universe</span>
               <button className="primary-button" onClick={() => setStage('letter')}>There’s a letter with your name on it <Mail size={17} /></button>
             </>}
             {stage === 'letter' && <LetterScene onNext={() => setStage('memories')} />}

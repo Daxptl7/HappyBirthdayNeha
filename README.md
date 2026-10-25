@@ -24,7 +24,7 @@ The opening tap is needed to enable browser audio. Keep the page open; at the de
 
 ## Set the content in code
 
-- `src/data/experienceConfig.ts`: set `celebrationAt` to an ISO timestamp including a timezone offset. The default `2026-10-27T00:00:00+05:30` is October 27, 2026 at midnight in India. Change this to any desired time for a production rehearsal.
+- `src/data/experienceConfig.ts`: set `celebrationAt` to an ISO timestamp including a timezone offset. The default `2026-10-26T00:00:00+05:30` is October 26, 2026 at midnight in India. Change this to any desired time for a production rehearsal.
 - The album uses the four supplied collages directly from `public/`: `IMG_4028.jpg`, `IMG_4026 2.PNG`, `IMG_4036.jpg`, and `IMG_4037.jpg`. Portrait frames show each complete collage without cropping, including in the enlarged view. The brown-top collage is the finale keepsake; the red-top collage also appears in the hidden surprise. Keep the filenames unchanged, including the PNG’s space and uppercase extension.
 - `src/data/defaultConfig.ts`: edit Neha’s name, birth date, letter, memory captions, and optional custom photo URLs.
 - `src/data/birthdayWishes.ts`: edit the twenty wishes. `experienceConfig.ts` controls the milestone age, hidden surprise, and finale photo ID and message.

@@ -12,9 +12,9 @@ const birthdaySong: BirthdaySong = {
 // All birthday content is managed here. No visitor edits or saved overrides.
 export const EXPERIENCE_CONFIG = {
   ...DEFAULT_BIRTHDAY_CONFIG,
-  // A fixed instant: 12 AM on October 27 in India, regardless of her timezone.
+  // A fixed instant: 12 AM on October 26 in India, regardless of her timezone.
   // Change this timestamp to set the real release time in any build.
-  celebrationAt: '2026-10-27T00:00:00+05:30',
+  celebrationAt: '2026-10-26T00:00:00+05:30',
   timeZone: 'Asia/Kolkata',
   // The supplied recording is served locally and starts at the countdown deadline.
   // Replace the file or update birthdaySong above to change the soundtrack.

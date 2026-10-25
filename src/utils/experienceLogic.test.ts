@@ -3,10 +3,10 @@ import assert from 'node:assert/strict';
 import { canStartCelebration, getCountdown, JOURNEY_STAGES, nextBirthdayStage, registerSecretTap, toLocalDateTimeInput } from './experienceLogic';
 import { BIRTHDAY_WISHES } from '../data/birthdayWishes';
 
-const midnight = Date.parse('2026-10-27T00:00:00+05:30');
+const midnight = Date.parse('2026-10-26T00:00:00+05:30');
 
 test('birthday midnight is a fixed India-time instant across visitor timezones', () => {
-  assert.equal(midnight, Date.parse('2026-10-26T18:30:00Z'));
+  assert.equal(midnight, Date.parse('2026-10-25T18:30:00Z'));
   assert.deepEqual(getCountdown(midnight, midnight - 90_061_000), {
     days: 1, hours: 1, minutes: 1, seconds: 1, hasStarted: false,
   });

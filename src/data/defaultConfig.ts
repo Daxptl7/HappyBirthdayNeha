@@ -3,7 +3,7 @@ import { BirthdayConfig } from '../types/birthday';
 export const DEFAULT_BIRTHDAY_CONFIG: BirthdayConfig = {
   recipientName: 'Neha',
   senderName: 'Your friend',
-  birthDate: '2006-10-27',
+  birthDate: '2006-10-26',
   headline: 'Happy Birthday, Beautiful Soul',
   subheadline: 'To the person who makes the world infinitely brighter just by existing in it.',
   letter: {
